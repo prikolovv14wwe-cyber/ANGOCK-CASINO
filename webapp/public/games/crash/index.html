@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ru"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Краш</title>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&family=Unbounded:wght@800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../game-base.css">
+</head><body>
+  <div class="stage"><div class="big" id="m">×1.00</div><div class="note" id="note">Выбери, на каком множителе забрать</div></div>
+  <div class="row">
+    <input id="target" type="number" min="1.01" step="0.01" value="2" inputmode="decimal" aria-label="Забрать на множителе">
+  </div>
+  <div class="row">
+    <input id="bet" type="number" min="1" step="1" value="10" inputmode="numeric" aria-label="Ставка в звёздах">
+  </div>
+  <button id="play">Старт</button>
+
+<script src="../angock-sdk.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  // Рост множителя во времени: m(t) = e^(k·t). Сюда потом встанет твоя анимация (мяч, кирка и т.д.)
+  const K = 0.00012;
+  $("play").onclick = async () => {
+    $("play").disabled = true; $("note").textContent = ""; $("m").className = "big";
+    try {
+      const target = Number($("target").value);
+      const r = await Angock.bet(Number($("bet").value), { target });
+      const stopAt = r.outcome.win ? target : r.outcome.crashPoint; // при выигрыше показываем до точки вывода
+      const t0 = performance.now();
+      await new Promise((done) => {
+        (function tick(t) {
+          const m = Math.min(stopAt, Math.exp(K * (t - t0)));
+          $("m").textContent = "×" + m.toFixed(2);
+          m >= stopAt ? done() : requestAnimationFrame(tick);
+        })(t0);
+      });
+      $("m").className = "big " + (r.outcome.win ? "win" : "lose");
+      $("note").textContent = r.outcome.win
+        ? `Забрал на ×${target}: +${r.payout} ★ (улетело до ×${r.outcome.crashPoint})`
+        : `Упало на ×${r.outcome.crashPoint}`;
+    } catch (e) {
+      $("note").textContent = e.message;
+    } finally {
+      $("play").disabled = false;
+    }
+  };
+</script>
+</body></html>

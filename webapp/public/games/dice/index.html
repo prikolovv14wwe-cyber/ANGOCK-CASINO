@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ru"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Кости</title>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&family=Unbounded:wght@800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../game-base.css">
+</head><body>
+  <div class="stage"><div class="big" id="roll">—</div><div class="note" id="note">Выпадет меньше выбранного шанса — выигрыш</div></div>
+  <div>
+    <label><span>Шанс <b id="chance-v">50</b>%</span><span>Выплата ×<b id="mult-v">1.92</b></span></label>
+    <input type="range" id="chance" min="1" max="95" value="50">
+  </div>
+  <div class="row">
+    <button class="chip" id="half">½</button>
+    <input id="bet" type="number" min="1" step="1" value="10" inputmode="numeric" aria-label="Ставка в звёздах">
+    <button class="chip" id="double">×2</button>
+  </div>
+  <button id="play">Бросить</button>
+
+<script src="../angock-sdk.js"></script>
+<script>
+  const RTP = 0.96; // только для подписи на экране; настоящий расчёт — на сервере
+  const $ = (id) => document.getElementById(id);
+  const upd = () => { $("chance-v").textContent = $("chance").value; $("mult-v").textContent = (RTP / ($("chance").value / 100)).toFixed(2); };
+  $("chance").oninput = upd; upd();
+  $("half").onclick = () => $("bet").value = Math.max(1, Math.floor($("bet").value / 2));
+  $("double").onclick = () => $("bet").value = Math.floor($("bet").value * 2);
+
+  $("play").onclick = async () => {
+    $("play").disabled = true; $("note").className = "note"; $("note").textContent = "";
+    try {
+      const r = await Angock.bet(Number($("bet").value), { chance: Number($("chance").value) });
+      // Короткая «прокрутка» чисел, затем реальный результат с сервера
+      const t0 = performance.now();
+      await new Promise((done) => {
+        (function spin(t) {
+          if (t - t0 < 500) { $("roll").textContent = (Math.random() * 100).toFixed(2); requestAnimationFrame(spin); }
+          else done();
+        })(t0);
+      });
+      $("roll").textContent = r.outcome.roll.toFixed(2);
+      $("roll").className = "big " + (r.outcome.win ? "win" : "lose");
+      $("note").textContent = r.outcome.win ? `Выигрыш ${r.payout} ★` : "Мимо";
+    } catch (e) {
+      $("note").textContent = e.message;
+    } finally {
+      $("play").disabled = false;
+    }
+  };
+</script>
+</body></html>

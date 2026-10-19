@@ -1,0 +1,18 @@
+# Render Blueprint: New → Blueprint → выбери этот репозиторий
+services:
+  - type: web
+    name: angock-casino
+    runtime: node
+    plan: free
+    buildCommand: npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: BOT_TOKEN
+        sync: false          # Render спросит токен при создании — в код его НЕ вписывай
+      - key: ADMIN_USERNAMES
+        value: ANGOCKKaz
+      - key: BOT_MODE
+        value: webhook
+      - key: NODE_VERSION
+        value: "22"

@@ -1,0 +1,9 @@
+{
+  "name": "angock-casino",
+  "private": true,
+  "scripts": {
+    "build": "cd webapp && npm install --include=dev && npm run build && cd ../server && npm install --include=dev",
+    "start": "cd server && npm start"
+  },
+  "engines": { "node": ">=20" }
+}
