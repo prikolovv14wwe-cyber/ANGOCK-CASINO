@@ -20,6 +20,14 @@ export function attachBridge(frame: HTMLIFrameElement, gameId: string, onBalance
         const r = await api.bet(gameId, Number(msg.amount), msg.params);
         onBalance(r.balance);
         reply(true, r);
+      } else if (msg.type === "angock:round") {
+        const r = await api.roundStart(gameId, Number(msg.bet), msg.stake === undefined ? undefined : Number(msg.stake));
+        onBalance(r.balance);
+        reply(true, r);
+      } else if (msg.type === "angock:win") {
+        const r = await api.roundWin(Number(msg.roundId), Number(msg.win));
+        onBalance(r.balance);
+        reply(true, r);
       } else if (msg.type === "angock:balance") {
         const me = await api.me();
         onBalance(me.balance);

@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import { config } from "./config.js";
 import { hashSeed, makeRng, newServerSeed } from "./rng.js";
 import { games } from "./games/registry.js";
+import { clientGameMap } from "./games/client-games.js";
 
 /**
  * Деньги храним в «центах звезды» (1 ⭐ = 100), чтобы выигрыш ×1.92
@@ -49,6 +50,17 @@ CREATE TABLE IF NOT EXISTS bets (
   client_seed      TEXT NOT NULL,
   nonce            INTEGER NOT NULL,
   created_at       INTEGER NOT NULL
+);
+-- Раунды клиентских игр: ставка списана, выплаты копятся до потолка cap
+CREATE TABLE IF NOT EXISTS rounds (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id    INTEGER NOT NULL,
+  game       TEXT NOT NULL,
+  bet_id     INTEGER NOT NULL,
+  cap        INTEGER NOT NULL,
+  paid       INTEGER NOT NULL DEFAULT 0,
+  open       INTEGER NOT NULL DEFAULT 1,
+  created_at INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS withdrawals (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -188,3 +200,66 @@ export function adminIdList(): number[] {
   }
   return [...ids];
 }
+
+/** Найти игрока по @юзернейму или числовому ID (игрок должен хоть раз написать боту /start) */
+export function findUser(target: string): UserRow | undefined {
+  const t = target.trim().replace(/^@/, "");
+  if (/^\d+$/.test(t)) return getUser(Number(t));
+  return db.prepare(`SELECT * FROM users WHERE lower(username) = lower(?)`).get(t) as UserRow | undefined;
+}
+
+/** Админ выдаёт (+) или забирает (−) звёзды. Забрать больше баланса нельзя — заберётся сколько есть. */
+export const adminAdjust = db.transaction((userId: number, stars: number, adminId: number) => {
+  let delta = Math.round(stars * CENTS);
+  if (delta < 0) delta = -Math.min(-delta, getUser(userId)!.balance);
+  if (delta === 0) return getUser(userId)!.balance;
+  return move(userId, delta, delta > 0 ? "admin_grant" : "admin_take", `admin:${adminId}`);
+});
+
+const ROUND_TTL_MS = 30 * 60 * 1000; // через 30 минут раунд закрывается сам
+
+/** Старт раунда клиентской игры: списать stake, решить судьбу, запомнить потолок */
+export const startRound = db.transaction((userId: number, gameId: string, betStars: number, stakeStars?: number) => {
+  const game = clientGameMap.get(gameId);
+  if (!game) throw new Error("Нет такой игры");
+  if (!Number.isInteger(betStars) || betStars < config.minBet || betStars > config.maxBet) {
+    throw new Error(`Ставка от ${config.minBet} до ${config.maxBet} ⭐`);
+  }
+  const stake = stakeStars ?? betStars;
+  if (!Number.isInteger(stake) || stake < 1 || stake > betStars * game.maxStakeX) throw new Error("Неверная цена спина");
+  const user = getUser(userId);
+  if (!user) throw new Error("Пользователь не найден");
+
+  db.prepare(`UPDATE rounds SET open = 0 WHERE user_id = ? AND open = 1`).run(userId);
+  const balance = move(userId, -stake * CENTS, "bet", gameId);
+
+  const fate = game.fate?.(makeRng(user.server_seed, user.client_seed, user.nonce));
+  const cap = Math.floor(betStars * CENTS * game.capX(fate));
+  db.prepare(`UPDATE users SET nonce = nonce + 1 WHERE id = ?`).run(userId);
+  const bet = db.prepare(
+    `INSERT INTO bets (user_id, game, amount, payout, multiplier, params, outcome, server_seed_hash, client_seed, nonce, created_at)
+     VALUES (?, ?, ?, 0, 0, ?, ?, ?, ?, ?, ?)`,
+  ).run(userId, gameId, stake * CENTS, JSON.stringify({ bet: betStars, stake }), JSON.stringify(fate ?? {}),
+    hashSeed(user.server_seed), user.client_seed, user.nonce, now());
+  const r = db.prepare(`INSERT INTO rounds (user_id, game, bet_id, cap, created_at) VALUES (?, ?, ?, ?, ?)`)
+    .run(userId, gameId, Number(bet.lastInsertRowid), cap, now());
+  return { roundId: Number(r.lastInsertRowid), fate: fate ?? null, balance };
+});
+
+/** Выплата в раунде: не больше остатка до потолка. Возвращает реально начисленное */
+export const roundWin = db.transaction((userId: number, roundId: number, winStars: number) => {
+  const r = db.prepare(`SELECT * FROM rounds WHERE id = ? AND user_id = ?`).get(roundId, userId) as
+    | { id: number; bet_id: number; cap: number; paid: number; open: number; created_at: number; game: string }
+    | undefined;
+  if (!r) throw new Error("Раунд не найден");
+  const balanceNow = () => getUser(userId)!.balance;
+  if (!r.open || now() - r.created_at > ROUND_TTL_MS) return { credited: 0, balance: balanceNow() };
+  const want = Math.floor(Math.max(0, Number(winStars) || 0) * CENTS);
+  const credit = Math.min(want, r.cap - r.paid);
+  if (credit <= 0) return { credited: 0, balance: balanceNow() };
+  const balance = move(userId, credit, "win", r.game);
+  db.prepare(`UPDATE rounds SET paid = paid + ? WHERE id = ?`).run(credit, r.id);
+  db.prepare(`UPDATE bets SET payout = payout + ?, multiplier = CAST(payout + ? AS REAL) / amount WHERE id = ?`)
+    .run(credit, credit, r.bet_id);
+  return { credited: credit, balance };
+});

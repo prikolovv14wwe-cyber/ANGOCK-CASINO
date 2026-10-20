@@ -23,7 +23,7 @@ export const config = {
   useWebhook: (process.env.BOT_MODE ?? (process.env.RENDER ? "webhook" : "polling")) === "webhook",
   dbPath: process.env.DB_PATH ?? "./casino.sqlite",
   minBet: Number(process.env.MIN_BET ?? 1),
-  maxBet: Number(process.env.MAX_BET ?? 1000),
+  maxBet: Number(process.env.MAX_BET ?? 10000),
   devUserId: process.env.DEV_USER_ID ? Number(process.env.DEV_USER_ID) : null,
   depositPacks: [50, 100, 250, 500, 1000, 2500],
 };

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Червячки ★ — демо</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;800&family=Golos+Text:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>.casino .demo-only{display:none!important}</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="vig"></div>
+
+<div id="hud" class="hidden">
+  <pre id="dev" class="hidden"></pre>
+  <div class="tr"><div class="lb"><ol id="lb"></ol></div></div>
+  <div class="bar">
+    <div class="bal"><span>Баланс</span><b class="num" id="bal"></b></div>
+    <div class="center">
+      <div class="mult num" id="mult">×0.00</div>
+      <div class="win num" id="win"></div>
+      <button id="cash" class="hidden"><span id="cashTxt"></span><i id="cashBar"></i></button>
+    </div>
+    <canvas id="mini" width="264" height="264"></canvas>
+  </div>
+  <button id="boostBtn" aria-label="Ускорение">⚡</button>
+</div>
+
+<div id="menu" class="overlay">
+  <div class="card">
+    <div class="logo">Червячки<span class="r">★</span></div>
+    <div class="sub demo-only">Демо-режим</div>
+    <div class="balbox">Баланс <span class="num" id="mbal"></span></div>
+
+    <div class="demo-only">
+    <div class="label">Демо-баланс</div>
+    <div class="presets" id="balPresets"></div>
+    <div class="custom">
+      <input id="balInput" inputmode="numeric" placeholder="Своя сумма, ★" aria-label="Свой баланс">
+      <button id="balSet">OK</button>
+    </div>
+    </div>
+
+    <div class="label">Ставка</div>
+    <div class="chips" id="chips"></div>
+    <div class="custom">
+      <input id="betInput" inputmode="numeric" placeholder="Своя ставка, ★" aria-label="Своя ставка">
+      <button id="betSet">OK</button>
+    </div>
+
+    <div class="label">Скин</div>
+    <div class="skins" id="skins"></div>
+
+    <div class="legend" id="legend"></div>
+    <button id="play" class="primary">Играть</button>
+    <div class="rules">
+      <p><b>Стрелки / WASD</b> — поворот. <b>Пробел / Shift / ⚡</b> — ускорение: червь укорачивается и тратит выигрыш.</p>
+      <p>Светящиеся шарики дают рост. Монеты дают деньги: на карте они редкие, в основном выпадают из погибших червей. Красная мина сжигает четверть выигрыша. Щит на 6 секунд защищает от мин.</p>
+      <p><b>Касса-портал.</b> Время от времени на столе открывается золотой портал, а ещё он появляется на месте червя, которого ты сбил. Заползи в него — выигрыш уходит на баланс. Стрелка у края экрана показывает, где портал, кольцо — сколько он ещё открыт.</p>
+      <p>Врезался головой в червя или в красную границу — выигрыш и ставка сгорают.</p>
+    </div>
+    <button id="devToggle" class="link demo-only">Панель RTP</button>
+  </div>
+</div>
+
+<div id="result" class="overlay hidden">
+  <div class="card">
+    <div id="rtitle"></div>
+    <div id="rsum"></div>
+    <div id="rnet"></div>
+    <div class="row">
+      <button id="again" class="primary">Ещё раунд</button>
+      <button id="tomenu" class="ghost">Меню</button>
+    </div>
+  </div>
+</div>
+
+<script src="../angock-sdk.js"></script>
+<script src="../angock-game.js" data-game="slither"></script>
+<script src="js/game.js"></script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 import { Bot, InlineKeyboard } from "grammy";
 import { config } from "./config.js";
-import { creditDeposit, db, getUser, resolveWithdrawal, stats, upsertUser, CENTS } from "./db.js";
+import { adminAdjust, creditDeposit, db, findUser, getUser, resolveWithdrawal, stats, upsertUser, CENTS } from "./db.js";
 import type { User } from "grammy/types";
 
 export function createBot() {
@@ -14,7 +14,7 @@ export function createBot() {
       reply_markup: new InlineKeyboard().webApp("🎰 Открыть казино", config.webappUrl),
     });
     if (isAdmin(ctx.from)) {
-      await ctx.reply(`Ты админ (ID ${ctx.from!.id}).\nКоманды: /stats, /refund <user_id> <charge_id>, /approve <id>, /reject <id>`);
+      await ctx.reply(`Ты админ (ID ${ctx.from!.id}).\nКоманды:\n/give 1000 — выдать себе\n/give @ник 500 — выдать игроку\n/take @ник 500 — забрать\n/user @ник — баланс игрока\n/stats, /refund, /approve, /reject`);
     }
   });
 
@@ -54,6 +54,34 @@ export function createBot() {
       `Игроков: ${s.users}\nПополнено: ${s.deposits / CENTS} ⭐\nПоставлено: ${s.wagered / CENTS} ⭐\n` +
         `Выплачено: ${s.paid / CENTS} ⭐\nФактический RTP: ${rtp}%\nЗаявок на вывод: ${s.pending_withdrawals}`,
     );
+  });
+
+  // /give 500 — себе; /give @ник 500 или /give 123456789 500 — игроку. /take — забрать
+  bot.command(["give", "take"], async (ctx) => {
+    if (!isAdmin(ctx.from)) return;
+    const parts = ctx.match.trim().split(/\s+/).filter(Boolean);
+    const take = ctx.message?.text?.startsWith("/take") ?? false;
+    const amountStr = parts.length === 1 ? parts[0] : parts[1];
+    const target = parts.length === 1 ? String(ctx.from!.id) : parts[0];
+    const amount = Number(amountStr);
+    if (!target || !Number.isFinite(amount) || amount <= 0) {
+      return ctx.reply("Формат: /give 1000 (себе) или /give @ник 500. Забрать: /take @ник 500");
+    }
+    const user = findUser(target);
+    if (!user) return ctx.reply("Игрок не найден. Он должен хоть раз написать боту /start");
+    const balance = adminAdjust(user.id, take ? -amount : amount, ctx.from!.id);
+    const who = user.username ? "@" + user.username : String(user.id);
+    await ctx.reply(`${take ? "Забрано" : "Выдано"} ${amount} ⭐ → ${who}. Баланс: ${balance / CENTS} ⭐`);
+    if (!take && user.id !== ctx.from!.id) {
+      await ctx.api.sendMessage(user.id, `🎁 Тебе начислено ${amount} ⭐`).catch(() => {});
+    }
+  });
+
+  bot.command("user", async (ctx) => {
+    if (!isAdmin(ctx.from)) return;
+    const user = findUser(ctx.match || "");
+    if (!user) return ctx.reply("Формат: /user @ник или /user 123456789");
+    await ctx.reply(`${user.username ? "@" + user.username : user.first_name} (ID ${user.id})\nБаланс: ${user.balance / CENTS} ⭐`);
   });
 
   // /refund <user_id> <charge_id> — вернуть платёж звёздами (звёзды уйдут обратно игроку)

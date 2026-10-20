@@ -1,14 +1,25 @@
-:root { --bg:#1C2230; --surface:#283044; --line:#3A4460; --text:#F1F3F8; --muted:#8C96AD; --gold:#F2C14E; --win:#5CC98A; --lose:#E36464; }
+:root { --bg:#2E3137; --stone:#4A4E57; --hi:#737885; --lo:#23252A; --drop:#17181B; --slot:#222428;
+  --text:#EFEADB; --muted:#A7ABB5; --gold:#F4C430; --gold-hi:#FFE38A; --gold-lo:#9C730C; --gold-ink:#2B1F02;
+  --emerald:#4CC26E; --redstone:#E0533F; --pixel:"Silkscreen","Golos Text",system-ui,sans-serif; }
 * { box-sizing: border-box; }
-body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font:400 15px/1.4 "Rubik",system-ui,sans-serif; display:flex; flex-direction:column; padding:16px; gap:14px; }
-.stage { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; min-height:200px; }
-.big { font:800 64px/1 "Unbounded",system-ui,sans-serif; font-variant-numeric:tabular-nums; }
-.note { color:var(--muted); min-height:1.4em; text-align:center; }
-.win { color:var(--win); } .lose { color:var(--lose); }
+body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font:400 15px/1.45 "Golos Text",system-ui,sans-serif; display:flex; flex-direction:column; padding:16px 14px; gap:14px; }
+.stage { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; min-height:200px;
+  background:var(--slot); box-shadow: inset 3px 3px 0 var(--drop), inset -3px -3px 0 #3A3D44; }
+.big { font:700 54px/1 var(--pixel); font-variant-numeric:tabular-nums; color:var(--gold); }
+.note { color:var(--muted); min-height:1.4em; text-align:center; padding:0 12px; }
+.win { color:var(--emerald); } .lose { color:var(--redstone); }
 label { display:flex; justify-content:space-between; color:var(--muted); font-size:13px; margin-bottom:6px; }
+label b { color:var(--text); font-family:var(--pixel); }
 input[type=range] { width:100%; accent-color:var(--gold); }
 .row { display:flex; gap:8px; }
-.row input { flex:1; padding:14px; border-radius:10px; border:1px solid var(--line); background:var(--surface); color:var(--text); font:inherit; }
-button { padding:14px; border-radius:10px; border:0; font:700 16px "Rubik",sans-serif; background:var(--gold); color:#3B2A05; cursor:pointer; }
-button:disabled { opacity:.5; }
-.chip { background:var(--surface); color:var(--text); border:1px solid var(--line); font-weight:500; }
+.row input { flex:1; min-width:0; padding:14px; border:0; background:var(--slot); color:var(--text); font:700 18px var(--pixel);
+  box-shadow: inset 3px 3px 0 var(--drop), inset -3px -3px 0 #3A3D44; }
+button { padding:15px 16px 16px; border:0; font:600 16px/1.1 "Golos Text",system-ui,sans-serif; cursor:pointer;
+  background:var(--gold); color:var(--gold-ink);
+  box-shadow: inset 3px 3px 0 var(--gold-hi), inset -3px -3px 0 var(--gold-lo), 0 4px 0 #4A3606; }
+button:active { transform:translateY(3px); box-shadow: inset 3px 3px 0 var(--gold-hi), inset -3px -3px 0 var(--gold-lo), 0 1px 0 #4A3606; }
+button:disabled { opacity:.55; transform:none; }
+button:focus-visible, input:focus-visible { outline:3px solid var(--gold); outline-offset:2px; }
+.chip { background:var(--stone); color:var(--text); min-width:52px;
+  box-shadow: inset 3px 3px 0 var(--hi), inset -3px -3px 0 var(--lo), 0 4px 0 var(--drop); }
+.chip:active { box-shadow: inset 3px 3px 0 var(--hi), inset -3px -3px 0 var(--lo), 0 1px 0 var(--drop); }

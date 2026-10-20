@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Bot } from "grammy";
 import { config } from "./config.js";
 import { validateInitData, type TgUser } from "./auth.js";
-import { adminIdList, CENTS, getUser, lastBets, placeBet, requestWithdrawal, rotateSeed, upsertUser } from "./db.js";
+import { adminIdList, CENTS, getUser, roundWin, startRound, lastBets, placeBet, requestWithdrawal, rotateSeed, upsertUser } from "./db.js";
 import { hashSeed } from "./rng.js";
 import { publicGameList } from "./games/registry.js";
 
@@ -71,6 +71,26 @@ export function registerApi(app: FastifyInstance, bot: Bot) {
         balance: stars(r.balance),
         nonce: r.nonce,
       };
+    } catch (e) {
+      return reply.code(400).send({ error: (e as Error).message });
+    }
+  });
+
+  // Клиентские игры: старт раунда и выплата
+  app.post<{ Body: { game: string; bet: number; stake?: number } }>("/api/round/start", async (req, reply) => {
+    try {
+      const b = req.body ?? ({} as any);
+      const r = startRound(req.tgUser.id, b.game, Number(b.bet), b.stake === undefined ? undefined : Number(b.stake));
+      return { roundId: r.roundId, fate: r.fate, balance: stars(r.balance) };
+    } catch (e) {
+      return reply.code(400).send({ error: (e as Error).message });
+    }
+  });
+
+  app.post<{ Body: { roundId: number; win: number } }>("/api/round/win", async (req, reply) => {
+    try {
+      const r = roundWin(req.tgUser.id, Number(req.body?.roundId), Number(req.body?.win));
+      return { credited: stars(r.credited), balance: stars(r.balance) };
     } catch (e) {
       return reply.code(400).send({ error: (e as Error).message });
     }

@@ -33,5 +33,8 @@ export const api = {
   bet: (game: string, bet: number, params: unknown) => call<BetResult>("/api/bet", { game, bet, params }),
   rotateSeed: (clientSeed?: string) =>
     call<{ revealedServerSeed: string; newServerSeedHash: string; clientSeed: string }>("/api/fair/rotate", { clientSeed }),
+  roundStart: (game: string, bet: number, stake?: number) =>
+    call<{ roundId: number; fate: Record<string, number> | null; balance: number }>("/api/round/start", { game, bet, stake }),
+  roundWin: (roundId: number, win: number) => call<{ credited: number; balance: number }>("/api/round/win", { roundId, win }),
   withdraw: (stars: number) => call<{ id: number }>("/api/withdraw", { stars }),
 };
